@@ -10,6 +10,7 @@ import {
 } from "react-native";
 
 import * as SplashScreen from "expo-splash-screen";
+import { Stack, Tabs, Link, router } from "expo-router";
 import { Image } from "expo-image";
 import { useFonts } from "expo-font";
 import { useEffect, useState } from "react";
@@ -23,23 +24,24 @@ import {
   AntDesign,
   MaterialIcons,
 } from "@expo/vector-icons";
-import { registerRootComponent } from "expo";
-import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
+import { StatusBar } from "expo-status-bar";
 
 SplashScreen.preventAutoHideAsync();
 
-function SignIn() {
+export default function signup() {
+  const [getImage, setImage] = useState(null);
   const [getMobile, setMobile] = useState("");
+  const [getFirstName, setFirstName] = useState("");
+  const [getLastName, setLastName] = useState("");
   const [getPassword, setPassword] = useState("");
-  const [getName, setName] = useState("");
 
   const [loaded, error] = useFonts({
-    "Montserrat-Bold": require("./assets/fonts/Montserrat-Bold.ttf"),
-    "Montserrat-Light": require("./assets/fonts/Montserrat-Light.ttf"),
-    "Montserrat-Regular": require("./assets/fonts/Montserrat-Regular.ttf"),
-    "Poppins-Bold": require("./assets/fonts/Poppins-Bold.ttf"),
-    "Poppins-Light": require("./assets/fonts/Poppins-Light.ttf"),
-    "Poppins-Regular": require("./assets/fonts/Poppins-Regular.ttf"),
+    "Montserrat-Bold": require("../assets/fonts/Montserrat-Bold.ttf"),
+    "Montserrat-Light": require("../assets/fonts/Montserrat-Light.ttf"),
+    "Montserrat-Regular": require("../assets/fonts/Montserrat-Regular.ttf"),
+    "Poppins-Bold": require("../assets/fonts/Poppins-Bold.ttf"),
+    "Poppins-Light": require("../assets/fonts/Poppins-Light.ttf"),
+    "Poppins-Regular": require("../assets/fonts/Poppins-Regular.ttf"),
   });
 
   useEffect(() => {
@@ -52,18 +54,32 @@ function SignIn() {
     return null;
   }
 
-  const logoPath = require("./assets/logo.png");
+  const logoPath = require("../assets/logo.png");
 
   return (
     <LinearGradient colors={["#859398", "#283048"]} style={stylesheet.view1}>
+      <StatusBar hidden={true} />
       <ScrollView>
         <View style={stylesheet.view2}>
           <Image source={logoPath} style={stylesheet.image1} />
           <Text style={stylesheet.text1}>Create Account</Text>
           <Text style={stylesheet.text2}>Hello ! Welcome to Smart Chat</Text>
-          <View style={stylesheet.avatar1}>
-            <Text style={stylesheet.text5}>{getName}</Text>
-          </View>
+          <Pressable
+            style={stylesheet.avatar1}
+            onPress={async () => {
+              let result = await ImagePicker.launchImageLibraryAsync({});
+
+              if (!result.canceled) {
+                setImage(result.assets[0].uri);
+              }
+            }}
+          >
+            <Image
+              source={getImage}
+              style={stylesheet.image2}
+              contentFit="container"
+            />
+          </Pressable>
           <Text style={stylesheet.text3}>Mobile</Text>
           <TextInput
             style={stylesheet.input1}
@@ -72,20 +88,23 @@ function SignIn() {
             onChangeText={(text) => {
               setMobile(text);
             }}
-            onEndEditing={async () => {
-              if (getMobile.length == 10) {
-                let response = await fetch(
-                  "http://192.168.8.186:8080/SmartChat/GetLetters?mobile=" +
-                    getMobile
-                );
-                if (response.ok) {
-                  let json = await response.json();
-                  setName(json.letters);
-                }
-              }
+          />
+          <Text style={stylesheet.text3}>First Name</Text>
+          <TextInput
+            style={stylesheet.input1}
+            inputMode="text"
+            onChangeText={(text) => {
+              setFirstName(text);
             }}
           />
-
+          <Text style={stylesheet.text3}>Last Name</Text>
+          <TextInput
+            style={stylesheet.input1}
+            inputMode="text"
+            onChangeText={(text) => {
+              setLastName(text);
+            }}
+          />
           <Text style={stylesheet.text3}>Password</Text>
           <TextInput
             style={stylesheet.input1}
@@ -101,44 +120,41 @@ function SignIn() {
             onPress={async () => {
               let formData = new FormData();
               formData.append("mobile", getMobile);
+              formData.append("firstname", getFirstName);
+              formData.append("lastname", getLastName);
               formData.append("password", getPassword);
+              formData.append("avatarImage", {
+                type: "image/png",
+                uri: getImage,
+              });
 
               let response = await fetch(
-                "http://192.168.8.186:8080/SmartChat/SignIn",
+                process.env.EXPO_PUBLIC_API_URL + "/SmartChat/SignUp",
                 {
                   method: "POST",
-                  body: JSON.stringify({
-                    mobile: getMobile,
-                    password: getPassword,
-                  }),
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
+                  body: formData,
                 }
               );
               if (response.ok) {
                 let json = await response.json();
                 if (json.success) {
-                  Alert.alert(
-                    "Success",
-                    "Hi " + json.user.first_name + "," + json.message
-                  );
+                  router.replace("/");
                 } else {
                   Alert.alert("Error", json.message);
                 }
               }
             }}
           >
-            <Text style={stylesheet.text4}>Sign In</Text>
+            <Text style={stylesheet.text4}>Sign Up</Text>
             <MaterialIcons name="account-circle" size={24} color="white" />
           </Pressable>
           <Pressable
             style={stylesheet.pressable2}
             onPress={() => {
-              alert("ok");
+              router.replace("/");
             }}
           >
-            <Text style={stylesheet.text4}>No Account ? Sign Up</Text>
+            <Text style={stylesheet.text4}>Already Registered ? Sign In</Text>
             <AntDesign name="login" size={24} color="white" />
           </Pressable>
         </View>
@@ -146,8 +162,6 @@ function SignIn() {
     </LinearGradient>
   );
 }
-
-registerRootComponent(SignIn);
 
 const stylesheet = StyleSheet.create({
   view1: {
@@ -200,7 +214,6 @@ const stylesheet = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 10,
-    marginTop: 10,
     flexDirection: "row",
     columnGap: 10,
   },
@@ -221,12 +234,6 @@ const stylesheet = StyleSheet.create({
     borderRadius: 50,
     backgroundColor: "white",
     justifyContent: "center",
-    alignSelf: "center",
-  },
-  text5: {
-    fontSize: 40,
-    fontFamily: "Poppins-Bold",
-    color: "#283048",
     alignSelf: "center",
   },
   view2: {
